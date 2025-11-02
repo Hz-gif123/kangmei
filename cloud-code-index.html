@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>顾客观看时长筛选系统</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .upload-area {
+      border: 2px dashed #667eea;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #f8f9ff;
+    }
+    
+    .upload-area:hover {
+      border-color: #764ba2;
+      background: #f0f2ff;
+    }
+    
+    .upload-area.active {
+      border-color: #4caf50;
+      background: #e8f5e9;
+    }
+    
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Consolas', monospace;
+      resize: vertical;
+      transition: border-color 0.3s;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .input-group input {
+      width: 200px;
+      padding: 10px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .btn {
+      padding: 12px 30px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+    
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .btn-success {
+      background: #4caf50;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #5a6268;
+      transform: translateY(-2px);
+    }
+    
+    .result-area {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .result-empty {
+      color: #999;
+      text-align: center;
+      padding: 40px;
+      font-size: 16px;
+    }
+    
+    .result-item {
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.2s;
+    }
+    
+    .result-item:hover {
+      transform: translateX(5px);
+    }
+    
+    .result-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 15px;
+    }
+    
+    .result-time {
+      color: #e74c3c;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .stat-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .alert {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-top: 15px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: slideIn 0.3s;
+      line-height: 1.5;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .alert-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .file-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .remove-file-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+    
+    .remove-file-btn:hover {
+      background: #c82333;
+    }
+    
+    .tip {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      color: #856404;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    
+    .step-number {
+      background: #667eea;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 顾客观看时长筛选系统</h1>
+      <p>快速筛选观看时长不达标的目标客户</p>
+    </div>
+    
+    <!-- 步骤1：上传顾客名单 -->
+    <div class="card">
+      <div class="card-title">
+        <span class="step-number">1</span>
+        <span>上传顾客名单</span>
+      </div>
+      <div class="input-group">
+        <label>输入目标顾客姓名（每行一个）：</label>
+        <textarea id="customerList" placeholder="张三&#10;李四&#10;王五&#10;赵六&#10;..."></textarea>
+        <div class="tip">
+          💡 提示：粘贴姓名列表，每行一个姓名，系统会自动保存到浏览器
+        </div>
+      </div>
+      <button class="btn btn-success" id="saveCustomerBtn">
+        <span>💾</span>
+        <span>保存名单</span>
+      </button>
+      <div id="customerStatus"></div>
+    </div>
+    
+    <!-- 步骤2：设置时长阈值 -->
+    <div class="card">
+      <div class="card-title">
+        <span class="step-number">2</span>
+        <span>设置观看时长阈值</span>
+      </div>
+      <div class="input-group">
+        <label>最小观看时长（分钟）：</label>
+        <input type="number" id="thresholdInput" value="40" min="0" step="1" />
+        <div class="tip">
+          💡 筛选逻辑：总观看时长（直播 + 回放）<strong>小于</strong>此值的客户
+        </div>
+      </div>
+    </div>
+    
+    <!-- 步骤3：上传Excel -->
+    <div class="card">
+      <div class="card-title">
+        <span class="step-number">3</span>
+        <span>上传 Excel 文件</span>
+      </div>
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📁</div>
+        <p style="font-size: 16px; color: #666; margin-bottom: 10px;">
+          点击或拖拽 Excel 文件到这里
+        </p>
+        <p style="font-size: 14px; color: #999;">
+          支持 .xlsx 和 .xls 格式<br>
+          需包含列：<strong>直播观看时长</strong>、<strong>回放观看时长</strong>、<strong>会员姓名</strong>
+        </p>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;" />
+      <div id="fileInfo"></div>
+      <div id="uploadStatus"></div>
+    </div>
+    
+    <!-- 筛选结果 -->
+    <div class="card" id="resultCard" style="display: none;">
+      <div class="card-title">
+        <span>✅</span>
+        <span>筛选结果</span>
+      </div>
+      
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-value" id="totalCount">0</div>
+          <div class="stat-label">Excel总人数</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="targetCount">0</div>
+          <div class="stat-label">目标客户数</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="filteredCount">0</div>
+          <div class="stat-label">观看不足人数</div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 30px;">
+        <h3 style="margin-bottom: 15px; color: #333;">📋 观看时长不足的客户明细：</h3>
+        <div class="result-area" id="resultArea"></div>
+      </div>
+      
+      <div class="button-group">
+        <button class="btn btn-primary" id="exportTxtBtn">
+          <span>📄</span>
+          <span>导出为文本</span>
+        </button>
+        <button class="btn btn-primary" id="exportExcelBtn">
+          <span>📊</span>
+          <span>导出为Excel</span>
+        </button>
+        <button class="btn btn-secondary" id="copyBtn">
+          <span>📋</span>
+          <span>复制到剪贴板</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let customerListData = [];
+    let excelData = [];
+    let filteredResults = [];
+    
+    // 元素引用
+    const customerList = document.getElementById('customerList');
+    const saveCustomerBtn = document.getElementById('saveCustomerBtn');
+    const customerStatus = document.getElementById('customerStatus');
+    const thresholdInput = document.getElementById('thresholdInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const resultCard = document.getElementById('resultCard');
+    const resultArea = document.getElementById('resultArea');
+    const totalCount = document.getElementById('totalCount');
+    const targetCount = document.getElementById('targetCount');
+    const filteredCount = document.getElementById('filteredCount');
+    const exportTxtBtn = document.getElementById('exportTxtBtn');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    
+    // 加载本地存储的名单
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem('customerList');
+      if (saved) {
+        customerList.value = saved;
+        customerListData = saved.split('\n').map(s => s.trim()).filter(s => s);
+        showAlert(customerStatus, `已自动加载 ${customerListData.length} 位顾客`, 'info');
+      }
+    });
+    
+    // 保存顾客名单
+    saveCustomerBtn.addEventListener('click', () => {
+      const text = customerList.value.trim();
+      if (!text) {
+        showAlert(customerStatus, '❌ 请输入顾客名单！', 'error');
+        return;
+      }
+      
+      customerListData = text.split('\n').map(s => s.trim()).filter(s => s);
+      localStorage.setItem('customerList', text);
+      showAlert(customerStatus, `✅ 已保存 ${customerListData.length} 位顾客到本地存储`, 'success');
+    });
+    
+    // 上传区域交互
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('active');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('active');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('active');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+    
+    // 处理Excel文件
+    async function handleFile(file) {
+      if (!file.name.match(/\.(xlsx|xls)$/)) {
+        showAlert(uploadStatus, '❌ 请上传 Excel 文件（.xlsx 或 .xls）', 'error');
+        return;
+      }
+      
+      if (customerListData.length === 0) {
+        showAlert(uploadStatus, '❌ 请先保存顾客名单！', 'error');
+        return;
+      }
+      
+      fileInfo.innerHTML = `
+        <div class="file-info">
+          📄 ${file.name} (${(file.size / 1024).toFixed(2)} KB)
+          <button class="remove-file-btn" onclick="removeFile()">✕ 移除</button>
+        </div>
+      `;
+      showAlert(uploadStatus, '⏳ 正在读取和处理 Excel 文件...', 'info');
+      
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { 
+          type: 'array',
+          cellDates: true,
+          cellNF: false,
+          cellText: true,
+          defval: ''
+        });
+        
+        // 获取第一个工作表
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        console.log('=== Excel 原始数据调试 ===');
+        console.log('工作表名称:', firstSheetName);
+        console.log('工作表范围:', worksheet['!ref']);
+        
+        // 读取前10行原始数据看看
+        const rawData = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,  // 返回二维数组，不解析列名
+          raw: false,
+          defval: '',
+          blankrows: true
+        });
+        
+        console.log('前10行原始数据:');
+        rawData.slice(0, 10).forEach((row, idx) => {
+          console.log(`第${idx + 1}行:`, row);
+        });
+        
+        // 尝试不同的方式读取
+        let jsonData = null;
+        let headerRow = 0;
+        
+        // 查找包含"会员姓名"的行作为表头
+        for (let i = 0; i < Math.min(rawData.length, 20); i++) {
+          const row = rawData[i];
+          const rowStr = row.join('').toLowerCase();
+          if (rowStr.includes('会员') || rowStr.includes('姓名') || rowStr.includes('直播') || rowStr.includes('时长')) {
+            headerRow = i;
+            console.log(`找到可能的表头行: 第${i + 1}行`, row);
+            break;
+          }
+        }
+        
+        // 从找到的表头行开始读取
+        if (headerRow > 0) {
+          console.log(`跳过前${headerRow}行，从第${headerRow + 1}行开始读取数据`);
+          jsonData = XLSX.utils.sheet_to_json(worksheet, {
+            range: headerRow,
+            raw: false,
+            defval: '',
+            blankrows: false
+          });
+        } else {
+          jsonData = XLSX.utils.sheet_to_json(worksheet, {
+            raw: false,
+            defval: '',
+            blankrows: false
+          });
+        }
+        
+        console.log('读取到的数据行数:', jsonData.length);
+        console.log('第一行数据示例:', jsonData[0]);
+        
+        if (jsonData.length === 0) {
+          showAlert(uploadStatus, 
+            `❌ Excel 文件无法读取数据！<br><br>
+            请检查：<br>
+            1. 文件是否有数据行<br>
+            2. 第一行是否是列名<br>
+            3. 是否有合并单元格<br><br>
+            💡 建议：复制需要的3列到新Excel中`, 
+            'error'
+          );
+          return;
+        }
+        
+        // 检查必需的列
+        const firstRow = jsonData[0];
+        const availableColumns = Object.keys(firstRow);
+        
+        console.log('可用的列名:', availableColumns);
+        console.log('列名数量:', availableColumns.length);
+        
+        // 智能查找列名（模糊匹配）
+        const nameColumn = availableColumns.find(col => {
+          const c = col.toLowerCase();
+          return c.includes('姓名') || c.includes('会员') || c === '姓名' || c === '会员';
+        });
+        
+        const liveColumn = availableColumns.find(col => {
+          const c = col.toLowerCase();
+          return c.includes('直播') && c.includes('时长');
+        });
+        
+        const replayColumn = availableColumns.find(col => {
+          const c = col.toLowerCase();
+          return c.includes('回放') && c.includes('时长');
+        });
+        
+        console.log('找到的列名映射:', { 
+          姓名列: nameColumn, 
+          直播列: liveColumn, 
+          回放列: replayColumn 
+        });
+        
+        if (!nameColumn || !liveColumn || !replayColumn) {
+          // 显示手动选择界面
+          showColumnSelector(availableColumns, jsonData);
+          return;
+        }
+        
+        // 处理数据：统一列名并解析时长
+        excelData = jsonData.map(row => {
+          return {
+            '会员姓名': row[nameColumn],
+            '直播观看时长': parseTimeString(row[liveColumn]),
+            '回放观看时长': parseTimeString(row[replayColumn])
+          };
+        }).filter(row => row['会员姓名']); // 过滤掉空行
+        
+        console.log('处理后的数据示例:', excelData[0]);
+        console.log('有效数据条数:', excelData.length);
+        
+        if (excelData.length === 0) {
+          showAlert(uploadStatus, '❌ 未找到有效数据！', 'error');
+          return;
+        }
+        
+        processData();
+        
+      } catch (error) {
+        console.error('读取失败:', error);
+        showAlert(uploadStatus, '❌ 读取 Excel 失败：' + error.message + '<br>请检查文件是否损坏或受保护', 'error');
+      }
+    }
+    
+    // 显示手动选择列的界面
+    function showColumnSelector(columns, data) {
+      const selectorHTML = `
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 15px;">
+          <h4 style="margin-bottom: 15px; color: #856404;">⚠️ 无法自动识别列名，请手动选择：</h4>
+          
+          <div style="margin-bottom: 10px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">会员姓名列：</label>
+            <select id="nameColumnSelect" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+              ${columns.map(col => `<option value="${col}">${col}</option>`).join('')}
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 10px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">直播观看时长列：</label>
+            <select id="liveColumnSelect" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+              ${columns.map(col => `<option value="${col}">${col}</option>`).join('')}
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">回放观看时长列：</label>
+            <select id="replayColumnSelect" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+              ${columns.map(col => `<option value="${col}">${col}</option>`).join('')}
+            </select>
+          </div>
+          
+          <button class="btn btn-primary" onclick="confirmColumnSelection()">
+            <span>✅</span>
+            <span>确认并开始处理</span>
+          </button>
+        </div>
+      `;
+      
+      uploadStatus.innerHTML = selectorHTML;
+      
+      // 保存数据供后续使用
+      window.tempExcelData = data;
+      window.tempColumns = columns;
+    }
+    
+    // 确认列选择
+    window.confirmColumnSelection = function() {
+      const nameColumn = document.getElementById('nameColumnSelect').value;
+      const liveColumn = document.getElementById('liveColumnSelect').value;
+      const replayColumn = document.getElementById('replayColumnSelect').value;
+      
+      console.log('用户选择的列:', { nameColumn, liveColumn, replayColumn });
+      
+      // 处理数据
+      excelData = window.tempExcelData.map(row => {
+        return {
+          '会员姓名': row[nameColumn],
+          '直播观看时长': parseTimeString(row[liveColumn]),
+          '回放观看时长': parseTimeString(row[replayColumn])
+        };
+      }).filter(row => row['会员姓名']);
+      
+      console.log('处理后的数据:', excelData.length, '条');
+      
+      if (excelData.length === 0) {
+        showAlert(uploadStatus, '❌ 未找到有效数据！', 'error');
+        return;
+      }
+      
+      processData();
+    };
+    
+    // 解析时长字符串 "0小时49分56秒" 或 数字
+    function parseTimeString(timeStr) {
+      if (!timeStr) return 0;
+      
+      // 如果已经是数字，直接返回
+      if (typeof timeStr === 'number') return timeStr;
+      
+      const str = timeStr.toString().trim();
+      
+      // 匹配格式：X小时Y分Z秒
+      const match = str.match(/(\d+)小时(\d+)分(\d+)秒/);
+      if (match) {
+        const hours = parseInt(match[1]) || 0;
+        const minutes = parseInt(match[2]) || 0;
+        const seconds = parseInt(match[3]) || 0;
+        return hours * 60 + minutes + seconds / 60;
+      }
+      
+      // 尝试直接转换为数字
+      const num = parseFloat(str);
+      return isNaN(num) ? 0 : num;
+    }
+    
+    // 移除文件
+    function removeFile() {
+      fileInput.value = '';
+      fileInfo.innerHTML = '';
+      uploadStatus.innerHTML = '';
+      resultCard.style.display = 'none';
+      excelData = [];
+      filteredResults = [];
+    }
+    
+    // 处理数据
+    function processData() {
+      const threshold = parseFloat(thresholdInput.value) || 0;
+      
+      console.log('开始处理数据，阈值:', threshold);
+      console.log('顾客名单:', customerListData);
+      console.log('Excel数据条数:', excelData.length);
+      
+      // 筛选逻辑
+      filteredResults = excelData.filter(row => {
+        const name = (row['会员姓名'] || '').toString().trim();
+        const liveTime = row['直播观看时长'] || 0;
+        const replayTime = row['回放观看时长'] || 0;
+        const totalTime = liveTime + replayTime;
+        
+        const inList = customerListData.includes(name);
+        const belowThreshold = totalTime < threshold;
+        
+        if (inList) {
+          console.log(`${name}: 直播${liveTime.toFixed(1)}分 + 回放${replayTime.toFixed(1)}分 = 总${totalTime.toFixed(1)}分, 低于阈值: ${belowThreshold}`);
+        }
+        
+        // 必须在顾客名单中 且 观看时长不足
+        return inList && belowThreshold;
+      }).map(row => ({
+        name: row['会员姓名'],
+        liveTime: row['直播观看时长'] || 0,
+        replayTime: row['回放观看时长'] || 0,
+        totalTime: (row['直播观看时长'] || 0) + (row['回放观看时长'] || 0)
+      }));
+      
+      // 按总时长升序排序
+      filteredResults.sort((a, b) => a.totalTime - b.totalTime);
+      
+      // 统计
+      const targetInExcel = excelData.filter(row => {
+        const name = (row['会员姓名'] || '').toString().trim();
+        return customerListData.includes(name);
+      });
+      
+      console.log('筛选结果:', filteredResults.length);
+      
+      totalCount.textContent = excelData.length;
+      targetCount.textContent = targetInExcel.length;
+      filteredCount.textContent = filteredResults.length;
+      
+      // 显示结果
+      displayResults();
+      resultCard.style.display = 'block';
+      showAlert(uploadStatus, `✅ 处理完成！筛选出 ${filteredResults.length} 位观看时长不足的客户`, 'success');
+      
+      // 滚动到结果
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // 显示结果
+    function displayResults() {
+      if (filteredResults.length === 0) {
+        resultArea.innerHTML = '<div class="result-empty">🎉 太棒了！所有目标客户的观看时长都达标了！</div>';
+        return;
+      }
+      
+      resultArea.innerHTML = filteredResults.map(item => `
+        <div class="result-item">
+          <span class="result-name">${item.name}</span>
+          <span class="result-time">
+            总: ${item.totalTime.toFixed(1)}分钟 
+            (直播: ${item.liveTime.toFixed(1)}, 回放: ${item.replayTime.toFixed(1)})
+          </span>
+        </div>
+      `).join('');
+    }
+    
+    // 导出为文本
+    exportTxtBtn.addEventListener('click', () => {
+      if (filteredResults.length === 0) {
+        alert('没有可导出的数据');
+        return;
+      }
+      
+      const header = '姓名\t直播观看时长(分钟)\t回放播放时长(分钟)\t总观看时长(分钟)\n';
+      const text = filteredResults.map(item => 
+        `${item.name}\t${item.liveTime.toFixed(1)}\t${item.replayTime.toFixed(1)}\t${item.totalTime.toFixed(1)}`
+      ).join('\n');
+      
+      downloadFile(`${header}${text}`, `观看时长不足客户_${getDateString()}.txt`, 'text/plain');
+    });
+    
+    // 导出为Excel
+    exportExcelBtn.addEventListener('click', () => {
+      if (filteredResults.length === 0) {
+        alert('没有可导出的数据');
+        return;
+      }
+      
+      const exportData = filteredResults.map(item => ({
+        '姓名': item.name,
+        '直播观看时长(分钟)': item.liveTime.toFixed(1),
+        '回放播放时长(分钟)': item.replayTime.toFixed(1),
+        '总观看时长(分钟)': item.totalTime.toFixed(1)
+      }));
+      
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "筛选结果");
+      XLSX.writeFile(wb, `观看时长不足客户_${getDateString()}.xlsx`);
+    });
+    
+    // 复制到剪贴板
+    copyBtn.addEventListener('click', async () => {
+      if (filteredResults.length === 0) {
+        alert('没有可复制的数据');
+        return;
+      }
+      
+      const text = filteredResults.map(item => 
+        `${item.name}\t${item.totalTime.toFixed(1)}分钟`
+      ).join('\n');
+      
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.innerHTML = '<span>✅</span><span>已复制！</span>';
+        setTimeout(() => {
+          copyBtn.innerHTML = '<span>📋</span><span>复制到剪贴板</span>';
+        }, 2000);
+      } catch (err) {
+        alert('复制失败，请手动复制');
+      }
+    });
+    
+    // 辅助函数
+    function showAlert(container, message, type) {
+      container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    }
+    
+    function getDateString() {
+      const now = new Date();
+      return `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    }
+    
+    function downloadFile(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
